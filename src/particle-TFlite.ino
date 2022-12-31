@@ -13,6 +13,8 @@ SYSTEM_MODE(MANUAL);
 #include "tensorflow/lite/version.h"
 #include "linreg_model_data.hpp"
 
+uint32_t beforeModelImport = System.freeMemory();
+
 const tflite::Model *model = tflite::GetModel(g_linear_regresion_model_data);
 tflite::MicroErrorReporter micro_error_reporter;
 tflite::ErrorReporter* error_reporter = &micro_error_reporter;
@@ -24,6 +26,8 @@ float randFloat(float min, float max)
 {
   return ((max - min) * ((float)rand() / RAND_MAX)) + min;
 }
+
+uint32_t beforePreAlloc = System.freeMemory();
 
 static tflite::ops::micro::AllOpsResolver resolver;
 constexpr int kTensorArenaSize = 2 * 1024;
@@ -37,6 +41,7 @@ void setup()
 {
 	// Put initialization like pinMode and begin functions here.
 	Serial.begin();
+	while(!Serial.isConnected());
 	if (model->version() != TFLITE_SCHEMA_VERSION)
 	{
 		error_reporter->Report(
@@ -50,6 +55,10 @@ void setup()
 
 	input = interpreter.input(0);
 	output = interpreter.output(0);
+	uint32_t postSetupMemory = System.freeMemory();
+	Serial.printlnf("Post model setup: %d", postSetupMemory);
+	Serial.printlnf("Before model prealloc: %d", beforePreAlloc);
+	Serial.printlnf("Before model import: %d", beforeModelImport);
 }
 
 // loop() runs over and over again, as quickly as it can execute.
@@ -70,4 +79,6 @@ void loop()
 
 	Serial.printlnf("%.2f, %.2f", x_val, y_val);
 	delay(500);
+	uint32_t freemem = System.freeMemory();
+	Serial.printlnf("Free memory: %d", freemem);
 }
